@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로또 추천</title>
+</head>
+<body>
+    <h1>로또 번호 추천</h1>
+
+    <div id="recommendation">
+        <!-- 추천 번호가 여기에 표시될 것입니다. -->
+    </div>
+
+    <script>
+        // 네이버 로또 페이지에서 최근 3개월간의 1등 당첨 번호를 가져오는 함수
+        async function fetchRecentWinningNumbers() {
+            const response = await fetch('https://m.dhlottery.co.kr/gameResult.do?method=winResult&startPage=1&endPage=1&currentPage=1');
+            const html = await response.text();
+
+            // HTML 파싱을 위해 DOM 객체 생성
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // 최근 3개월간의 1등 당첨 번호를 가져옴
+            const winningNumbers = doc.querySelectorAll('.tbl_data tbody tr');
+            const recentWinningNumbers = [];
+            for (let i = 0; i < 3; i++) {
+                const numbers = winningNumbers[i].querySelector('.ball_645').innerText.split(', ');
+                recentWinningNumbers.push(numbers);
+            }
+
+            return recentWinningNumbers;
+        }
+
+        // 추천 알고리즘: 최근 3개월간의 당첨 번호를 기반으로 추천 번호 생성
+        async function generateRecommendation() {
+            const recentWinningNumbers = await fetchRecentWinningNumbers();
+
+            // 추천 번호 생성 로직 예시: 당첨 번호 중 자주 등장하는 번호 추출
+            const recommendedNumbers = [];
+            const numberCount = {}; // 각 번호의 등장 횟수를 저장하는 객체
+            recentWinningNumbers.forEach(numbers => {
+                numbers.forEach(number => {
+                    if (!numberCount[number]) {
+                        numberCount[number] = 1;
+                    } else {
+                        numberCount[number]++;
+                    }
+                });
+            });
+
+            // 등장 횟수가 가장 많은 번호 6개를 추천 번호로 선택
+            Object.entries(numberCount)
+                .sort((a, b) => b[1] - a[1]) // 등장 횟수를 기준으로 내림차순 정렬
+                .slice(0, 6) // 상위 6개 번호만 선택
+                .forEach(entry => recommendedNumbers.push(entry[0]));
+
+            return recommendedNumbers;
+        }
+
+        // HTML에 추천 번호를 표시하는 함수
+        async function displayRecommendation() {
+            const recommendationDiv = document.getElementById('recommendation');
+            const recommendedNumbers = await generateRecommendation();
+
+            // 추천 번호를 HTML 형식으로 변환하여 표시
+            const recommendationHTML = `<h2>추천 번호:</h2><p>${recommendedNumbers.join(', ')}</p>`;
+            recommendationDiv.innerHTML = recommendationHTML;
+        }
+
+        // 페이지 로드 시 추천 번호를 표시
+        displayRecommendation();
+    </script>
+</body>
+</html>
